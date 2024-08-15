@@ -2,7 +2,7 @@ import os
 from tkinter import filedialog as fd
 import numpy as np
 import pandas as pd
-import scipy
+from scipy import integrate
 
 PATH_VIA_TERMINAL = True
 
@@ -33,13 +33,19 @@ if material == "AlN":
 
 list = []
 for i in range(len(df["Date"])):
-    if df.loc[i, "DO39"] == 0 and df.loc[i, "DO38"] == 1 and df.loc[i, "DO40"] == 1:
+    if df.loc[i, blocking_valve] == 0 and df.loc[i, bubbler_out_valve] == 1 and df.loc[i, bubbler_in_valve] == 1:
         list.append(i)
-testing = df.loc[list, ["Time","AI32"]]
+np_metal_outs = np.squeeze(np.asarray(df.loc[list, ["AI32"]]))
+metal_outs = df.loc[list, ["AI32"]]
+
+print(np_metal_outs)
+print(type(np_metal_outs))
+
+used_metal = integrate.trapezoid(y = np_metal_outs, dx = 1)
 
 list_string = '\n'.join(str(x) for x in list)
 
-print(testing.head(VERY_BIG_NUMBER))
+print(metal_outs.head(VERY_BIG_NUMBER))
 
 html = (df.style).to_html()
 f = open("demofile.html", "w")
@@ -50,4 +56,7 @@ f = open("demofile2.txt", "w")
 f.write(list_string)
 f.close()
 
+print("in")
+print(used_metal)
+print("out")
 # df.head()
