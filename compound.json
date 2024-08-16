@@ -1,0 +1,22 @@
+{
+    "GaN": {
+        "bubbler_in_valve": "DO28",
+        "bubbler_out_valve": "DO26",
+        "blocking_valve": "DO27",
+        "mass_flow_controler": "AI38",
+        "molar_mass": 114.827,
+        "A": 8.501,
+        "B": 1824,
+        "T": -10
+    },
+    "AlN": {
+        "bubbler_in_valve": "DO40",
+        "bubbler_out_valve": "DO38",
+        "blocking_valve": "DO39",
+        "mass_flow_controler": "AI32",
+        "molar_mass": 72.09,
+        "A": 8.224,
+        "B": 2134.83,
+        "T": 8
+    }
+}
