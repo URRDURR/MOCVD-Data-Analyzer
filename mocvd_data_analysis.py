@@ -6,6 +6,9 @@ import pandas as pd
 from scipy import integrate
 import json
 
+# //////////////////////////////////////////////////////
+# add a thing that displays the total growth length time
+# //////////////////////////////////////////////////////
 
 # returns
 def total_slpm_flow(df):
@@ -33,26 +36,27 @@ def liters_to_grams(liters):
     return grams
 
 
-PATH_VIA_TERMINAL = True
+# give the locations of all files of a type in a folder
+def extract_file_locations(folder_path):
+    file_type = "csv"
+    # variable holds list of locations of all files of one type in a folder
+    file_paths = []
+
+    # creates list of all .{} files in directory
+    for i in os.listdir(folder_path):
+        if i.endswith(file_type):
+            file_paths.append(i)
+
+    # give absolute path of each file in the directory
+    for i in range(len(file_paths)):
+        file_paths[i] = folder_path + "\\" + file_paths[i]
+
+    return file_paths
+
+
+PATH_VIA_TERMINAL = False
 
 VERY_BIG_NUMBER = 1_000_000
-
-# location = input("would you like to select a [file] or a [directory]")
-# if location == "file":
-#         file_path = fd.askopenfilename()
-# elif location == "directory":
-#     file_path = fd.askdirectory()
-#     print(file_path)
-# else:
-#     print(input )
-
-if PATH_VIA_TERMINAL == False:
-    file_path = fd.askdirectory()
-    print(file_path)
-else:
-    file_path = r"C:\Users\gma78\Desktop\2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
-
-dataframe = pd.read_csv(file_path, delimiter=",", parse_dates=True, header=4)
 
 metal_organic = "AlN"
 
@@ -67,7 +71,41 @@ mass_flow_controler = "AI32"
 molar_mass = 72.09
 A = 8.224
 B = 2134.83
-T = 8
+T = 18
+
+
+if PATH_VIA_TERMINAL == True:
+    while True:
+        location = input("would you like to select a [file] or a [directory]: ")
+        if location == "file":
+            file_path = fd.askopenfilename()
+            print(file_path)
+            tag = 0
+            break
+        elif location == "directory":
+            folder_path = fd.askdirectory()
+            tag = 1
+            break
+        else:
+            print("please try again")
+            continue
+else:
+    tag = 2
+    file_path = r"C:\Users\gma78\Desktop\2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
+    folder_path = r""
+    files = [file_path]
+
+if tag == 0:
+    no_of_files = 1
+    files = [file_path]
+elif tag == 2:
+    pass
+else:
+    files = extract_file_locations(folder_path)
+
+for i in files:
+    print(i)
+    dataframe = pd.read_csv(i, delimiter=",", parse_dates=True, header=4)
 
 total_liters_flow, index_tracker = total_slpm_flow(dataframe)
 
