@@ -10,6 +10,7 @@ import json
 # add a thing that displays the total growth length time
 # //////////////////////////////////////////////////////
 
+
 # returns
 def total_slpm_flow(df):
 
@@ -19,9 +20,9 @@ def total_slpm_flow(df):
         if df.loc[i, blocking_valve] == 0 and df.loc[i, bubbler_out_valve] == 1 and df.loc[i, bubbler_in_valve] == 1:
             index_tracker.append(i)
 
-    flow_rate_index = np.squeeze(np.asarray(df.loc[index_tracker, [mass_flow_controler]]))
+    flow_rate_array = np.squeeze(np.asarray(df.loc[index_tracker, [mass_flow_controler]]))
 
-    total_liters_flow = (integrate.trapezoid(y=flow_rate_index, dx=1)) / 1000
+    total_liters_flow = (integrate.trapezoid(y=flow_rate_array, dx=1)) / 1000
 
     return total_liters_flow, index_tracker
 
@@ -54,11 +55,9 @@ def extract_file_locations(folder_path):
     return file_paths
 
 
-PATH_VIA_TERMINAL = False
+PATH_VIA_TERMINAL = True
 
-VERY_BIG_NUMBER = 1_000_000
-
-metal_organic = "AlN"
+metal_organic = "TMAl"
 
 # compounds = open("compound.json")
 # metal_organic_properties = json.load(compounds)[metal_organic]
@@ -76,50 +75,48 @@ T = 18
 
 if PATH_VIA_TERMINAL == True:
     while True:
-        location = input("would you like to select a [file] or a [directory]: ")
-        if location == "file":
+        location = input("would you like to select a file [1] or a directory [2]: ")
+        if location == "1":
             file_path = fd.askopenfilename()
-            print(file_path)
-            tag = 0
+            files = [file_path]
             break
-        elif location == "directory":
+        elif location == "2":
             folder_path = fd.askdirectory()
-            tag = 1
+            files = extract_file_locations(folder_path)
             break
         else:
             print("please try again")
             continue
 else:
-    tag = 2
     file_path = r"C:\Users\gma78\Desktop\2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
     folder_path = r""
     files = [file_path]
 
-if tag == 0:
-    no_of_files = 1
-    files = [file_path]
-elif tag == 2:
-    pass
-else:
-    files = extract_file_locations(folder_path)
+liters_total = 0
+time_total = 0
 
 for i in files:
     print(i)
     dataframe = pd.read_csv(i, delimiter=",", parse_dates=True, header=4)
+    total_liters_flow, index_tracker = total_slpm_flow(dataframe)
 
-total_liters_flow, index_tracker = total_slpm_flow(dataframe)
+    time_total += len(index_tracker)
+    liters_total += total_liters_flow
 
-print(liters_to_grams(total_liters_flow))
+print("Grams in last run:", liters_to_grams(total_liters_flow))
+print("Grams total of", metal_organic, ":", liters_to_grams(liters_total))
 
-list_string = "\n".join(str(x) for x in index_tracker)
+print("total time run for", metal_organic, ":", time_total)
 
-html = (dataframe.style).to_html()
-f = open("demofile.html", "w")
-f.write(html)
-f.close()
+# list_string = "\n".join(str(x) for x in index_tracker)
 
-f = open("demofile2.txt", "w")
-f.write(list_string)
-f.close()
+# html = (dataframe.style).to_html()
+# f = open("demofile.html", "w")
+# f.write(html)
+# f.close()
 
-print("finished")
+# f = open("demofile2.txt", "w")
+# f.write(list_string)
+# f.close()
+
+print("Finished")
