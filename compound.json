@@ -14,6 +14,7 @@
         "bubbler_out_valve": "DO38",
         "blocking_valve": "DO39",
         "mass_flow_controler": "AI32",
+        "pressure_flow_controler": "AI33",
         "molar_mass": 72.09,
         "A": 8.224,
         "B": 2134.83,
