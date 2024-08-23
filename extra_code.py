@@ -1,3 +1,6 @@
+while(True):
+    continue
+
 data = df.loc[:, ["Date", "Time","DO38","DO39","DO40","AI32"]]
 
 here = os.path.dirname(os.path.abspath(__file__))

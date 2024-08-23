@@ -7,6 +7,7 @@ import json
 from pint import UnitRegistry
 import re
 
+
 # returns the total number of liters that flow out of the bubbler
 def total_slpm_flow(df):
 
@@ -50,7 +51,7 @@ def liters_to_grams(liters):
     partial_pressure_torr = 10 ** (A - (B / (t + 273.15)))
     mols = (partial_pressure_torr * liters) / (R_TORR_LITERS * (t + 273.15))
 
-    print("ack",mols/9.25)
+    print("ack", mols / 9.25)
 
     grams = molar_mass * mols
 
@@ -143,21 +144,9 @@ print(grams_by_run)
 print(time_by_run)
 
 
-by_run = pd.DataFrame(
-    {
-        "Name": name,
-        "Grams by run": grams_by_run,
-        "Time by run": time_by_run,
-    }
-)
+by_run = pd.DataFrame({"Name": name, "Grams by run": grams_by_run, "Time by run": time_by_run})
 
-totals = pd.DataFrame(
-    {
-        "Grams total": grams_total,
-        "Time total": time_total,
-    },
-    index=[0],
-)
+totals = pd.DataFrame({"Grams total": grams_total, "Time total": time_total}, index=[0])
 
 result = pd.concat([by_run, totals], axis=1)
 
