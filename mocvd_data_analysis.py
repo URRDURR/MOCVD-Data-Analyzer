@@ -7,21 +7,27 @@ import json
 from pint import UnitRegistry
 import re
 
+STANDARD_PRESSURE_TORR = 760
+STANDARD_TEMPERATURE_KELVIN = 273.15
+
+#TODO #1 split name into date and name
 
 # returns the total number of liters that flow out of the bubbler
 def total_slpm_flow(df):
 
-    temp = 18
+    partial_pressure_torr = 10 ** (A - (B / (t + STANDARD_TEMPERATURE_KELVIN)))
 
     index_tracker = []
 
     for i in range(len(df["Date"])):
         if df.loc[i, blocking_valve] == 0 and df.loc[i, bubbler_out_valve] == 1 and df.loc[i, bubbler_in_valve] == 1:
-            index_tracker.append(i)
+            index_tracker.append(i) 
+    # NOTE: Assumsumption here is that if the valve opens multiple times, the slight increase in total volume calculated due to placing the 1st closing
+    # by the second oppening of the valve, and then integrating over that area, is so negligible that it is unnecessary to change the calculation to remove this
 
     # array of the pressure level (Torr)
     pressure_array = np.squeeze(np.asarray(df.loc[index_tracker, [pressure_flow_controler]]))
-
+    
     # array of the rate of flow (standard cubic centimeters per minute)
     flow_rate_array = np.squeeze(
         np.asarray(df.loc[index_tracker, [mass_flow_controler]])
@@ -33,7 +39,10 @@ def total_slpm_flow(df):
 
     # Turned into regular liters per second
     for i in range(len(flow_rate_array)):
-        flow_rate_array[i] = flow_rate_array[i] * (((t + 273.15) / (273.15)) * (760 / pressure_array[i]))
+        flow_rate_array[i] = flow_rate_array[i] * (
+            ((t + STANDARD_TEMPERATURE_KELVIN) / (STANDARD_TEMPERATURE_KELVIN))
+            * (STANDARD_PRESSURE_TORR / (pressure_array[i] - partial_pressure_torr))
+        )
 
     # Numericaly integrates into total real liters
     total_liters_flow = integrate.trapezoid(y=flow_rate_array, dx=1)
@@ -46,13 +55,9 @@ def liters_to_grams(liters):
     # gas constant in units "Torr" and "Liters"
     R_TORR_LITERS = 62.3638
 
-    # calculates partial pressure and applies (pv)/(rt) = n to get mols (factor of 2 added to account for tmal being dimer)
-    # NOTE: need to add a check for this in non dimer compounds (or just double the molar mass)
-    partial_pressure_torr = 10 ** (A - (B / (t + 273.15)))
-    mols = (partial_pressure_torr * liters) / (R_TORR_LITERS * (t + 273.15))
-
-    print("ack", mols / 9.25)
-
+    # calculates partial (Antoine Equation) pressure and applies (pv)/(rt) = n to get mols (factor of 2 added to account for tmal being dimer)
+    partial_pressure_torr = 10 ** (A - (B / (t + STANDARD_TEMPERATURE_KELVIN)))
+    mols = (partial_pressure_torr * liters) / (R_TORR_LITERS * (t + STANDARD_TEMPERATURE_KELVIN))
     grams = molar_mass * mols
 
     return grams
@@ -94,6 +99,10 @@ A = 8.224
 B = 2134.83
 t = -10
 
+test_amount = 0.009555694
+
+liters_to_grams(test_amount)
+
 # Selects all the files to be read
 if PATH_VIA_TERMINAL == True:
     while True:
@@ -108,7 +117,6 @@ if PATH_VIA_TERMINAL == True:
             break
         else:
             print("please try again")
-            continue
 else:
     file_path = r"C:/Users/gma78/Desktop/Excels/2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
     files = [file_path]
@@ -118,6 +126,7 @@ time_total = 0
 
 grams_by_run = []
 time_by_run = []
+date = []
 name = []
 
 # Calculates the total time on and liters outputed of the given metal oxide/bubbler
@@ -136,7 +145,8 @@ for i in files:
 
     designator = re.split("/|\\\\", i)
     print(designator)
-    designator = ((designator)[-1].split(" "))[0]
+    # file_name = ((designator)[-1].split(" "))[0]
+    # file_date = ((designator)[-1].split(" "))[0]
 
     name.append(designator)
 
