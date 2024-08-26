@@ -10,8 +10,6 @@ import re
 STANDARD_PRESSURE_TORR = 760
 STANDARD_TEMPERATURE_KELVIN = 273.15
 
-#TODO #1 split name into date and name
-
 # returns the total number of liters that flow out of the bubbler
 def total_slpm_flow(df):
 
@@ -21,13 +19,13 @@ def total_slpm_flow(df):
 
     for i in range(len(df["Date"])):
         if df.loc[i, blocking_valve] == 0 and df.loc[i, bubbler_out_valve] == 1 and df.loc[i, bubbler_in_valve] == 1:
-            index_tracker.append(i) 
+            index_tracker.append(i)
     # NOTE: Assumsumption here is that if the valve opens multiple times, the slight increase in total volume calculated due to placing the 1st closing
     # by the second oppening of the valve, and then integrating over that area, is so negligible that it is unnecessary to change the calculation to remove this
 
     # array of the pressure level (Torr)
     pressure_array = np.squeeze(np.asarray(df.loc[index_tracker, [pressure_flow_controler]]))
-    
+
     # array of the rate of flow (standard cubic centimeters per minute)
     flow_rate_array = np.squeeze(
         np.asarray(df.loc[index_tracker, [mass_flow_controler]])
@@ -147,7 +145,7 @@ for i in files:
     print(designator)
     # file_name = ((designator)[-1].split(" "))[0]
     # file_date = ((designator)[-1].split(" "))[0]
-
+    # TODO 1 split name into date and name
     name.append(designator)
 
 print(grams_by_run)
