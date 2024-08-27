@@ -11,10 +11,6 @@ STANDARD_TEMPERATURE_KELVIN = 273.15
 
 # returns the total number of liters that flow out of the bubbler
 def slpm_to_liters(df, organometal):
-    # partial_pressure_torr = 10 ** (
-    #     organometal.a - (organometal.b / (organometal.t + STANDARD_TEMPERATURE_KELVIN))
-    # )
-
     index_tracker = []
 
     for i in range(len(df["Date"])):
@@ -28,9 +24,7 @@ def slpm_to_liters(df, organometal):
     # by the second oppening of the valve, and then integrating over that area, is so negligible that it is unnecessary to change the calculation to remove this
 
     # array of the pressure level (Torr)
-    pressure_array = np.squeeze(
-        np.asarray(df.loc[index_tracker, [organometal.pressure_flow_controler]])
-    )
+    pressure_array = np.squeeze(np.asarray(df.loc[index_tracker, [organometal.pressure_flow_controler]]))
 
     # array of the rate of flow (standard cubic centimeters per minute)
     flow_rate_array = np.squeeze(
@@ -44,10 +38,7 @@ def slpm_to_liters(df, organometal):
     # Turned into regular liters per second
     for i in range(len(flow_rate_array)):
         flow_rate_array[i] = flow_rate_array[i] * (
-            (
-                (organometal.t + STANDARD_TEMPERATURE_KELVIN)
-                / (STANDARD_TEMPERATURE_KELVIN)
-            )
+            ((organometal.t + STANDARD_TEMPERATURE_KELVIN) / (STANDARD_TEMPERATURE_KELVIN))
             * (STANDARD_PRESSURE_TORR / (pressure_array[i] - organometal.partial_pressure_torr()))
         )
 
@@ -62,14 +53,11 @@ def liters_to_grams(liters, organometal):
     # gas constant in units "Torr" and "Liters"
     R_TORR_LITERS = 62.3638
 
-    # calculates partial (Antoine Equation) pressure and applies (pv)/(rt) = n to get mols (factor of 2 added to account for tmal being dimer)
-    # partial_pressure_torr = 10 ** (
-    #     organometal.a - (organometal.b / (organometal.t + STANDARD_TEMPERATURE_KELVIN))
-    # )
-    mols = (organometal.partial_pressure_torr() * liters) / (
-        R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN)
-    )
+    # Applies (pv)/(rt) = n to get mols
+    mols = (organometal.partial_pressure_torr() * liters) / (R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN))
     grams = organometal.molar_mass * mols
+
+    print(mols / 9.25)
 
     return grams
 
@@ -92,27 +80,20 @@ def extract_file_locations(folder_path):
     return file_paths
 
 
-PATH_VIA_TERMINAL = True
-
-metal_organic = "TMAl"
-
-# compounds = open("compound.json")
-# metal_organic_properties = json.load(compounds)[metal_organic]
-# compounds.close()
-
-
-class TMAl_Source:
-    def __init__(self):
-        self.name = "TMAl"
-        self.bubbler_in_valve = "DO40"
-        self.bubbler_out_valve = "DO38"
-        self.blocking_valve = "DO39"
-        self.mass_flow_controler = "AI32"
-        self.pressure_flow_controler = "AI33"
-        self.molar_mass = 72.09 * 2
-        self.a = 8.224
-        self.b = 2134.83
-        self.t = -10
+class Organometal_Source:
+    def __init__(
+        self, name, bubbler_in_valve, bubbler_out_valve, blocking_valve, mass_flow_controler, pressure_flow_controler, molar_mass, a, b, t
+    ):
+        self.name = name
+        self.bubbler_in_valve = bubbler_in_valve
+        self.bubbler_out_valve = bubbler_out_valve
+        self.blocking_valve = blocking_valve
+        self.mass_flow_controler = mass_flow_controler
+        self.pressure_flow_controler = pressure_flow_controler
+        self.molar_mass = molar_mass
+        self.a = a
+        self.b = b
+        self.t = t
 
     def partial_pressure_torr(self):
         return 10 ** (self.a - (self.b / (self.t + STANDARD_TEMPERATURE_KELVIN)))
@@ -120,23 +101,40 @@ class TMAl_Source:
     def calculate_mass_and_time(self, file_path):
         df = pd.read_csv(file_path, delimiter=",", parse_dates=True, header=4)
         total_liters, index_tracker = slpm_to_liters(df, self)
+
         grams = float(liters_to_grams(total_liters, self))
-
         time = len(index_tracker)
-        return time, grams
+
+        return grams, time
 
 
-tmal = TMAl_Source()
+tmal = Organometal_Source(
+    name="TMAl",
+    bubbler_in_valve="DO40",
+    bubbler_out_valve="DO38",
+    blocking_valve="DO39",
+    mass_flow_controler="AI32",
+    pressure_flow_controler="AI33",
+    molar_mass=(72.09 * 2),
+    a=8.224,
+    b=2134.83,
+    t=-10,
+)
 
-# bubbler_in_valve = "DO40"
-# bubbler_out_valve = "DO38"
-# blocking_valve = "DO39"
-# mass_flow_controler = "AI32"
-# pressure_flow_controler = "AI33"
-# molar_mass = 72.09 * 2
-# a = 8.224
-# b = 2134.83
-# t = -10
+tmga = Organometal_Source(
+    name="TMGa",
+    bubbler_in_valve="DO28",
+    bubbler_out_valve="DO26",
+    blocking_valve="DO27",
+    mass_flow_controler="AI38",
+    pressure_flow_controler="todo",
+    molar_mass=114.827,
+    a=8.501,
+    b=1824,
+    t=-10,
+)
+
+PATH_VIA_TERMINAL = False
 
 test_amount = 0.009555694
 
@@ -166,25 +164,16 @@ names_list = []
 # Calculates the total time on and liters outputed of the given metal oxide/bubbler
 for file in files:
     print(file)
-    # dataframe = pd.read_csv(i, delimiter=",", parse_dates=True, header=4)
-    # total_flow_liters, index_tracker = slpm_to_liters(dataframe)
-
-    # total_grams = liters_to_grams(total_flow_liters)
 
     grams, time = tmal.calculate_mass_and_time(file)
 
-    grams_by_run.append(grams)
-    time_by_run.append(time)
-
     file_name = re.split("/|\\\\", file)
     designation = ((file_name)[-1].split(" "))[0]
-
     date = designation.split("_")[0]
     name = " ".join(designation.split("_")[1:])
 
-    # file_name = ((designator)[-1].split(" "))[0]
-    # file_date = ((designator)[-1].split(" "))[0]
-    # TODO 1 split name into date and name
+    grams_by_run.append(grams)
+    time_by_run.append(time)
     names_list.append(name)
     dates_list.append(date)
 
@@ -193,35 +182,20 @@ time_total = sum(time_by_run)
 
 by_run = pd.DataFrame(
     {
-        "Date": dates_list,
+        "Date (yy/mm/dd)": dates_list,
         "Name": names_list,
-        "Grams by run": grams_by_run,
-        "Time by run": time_by_run,
+        "Mass (Grams)": grams_by_run,
+        "Time (Seconds)": time_by_run,
     }
 )
 
-totals = pd.DataFrame({"Grams total": grams_total, "Time total": time_total}, index=[0])
+totals = pd.DataFrame({"Total Mass (Grams)": grams_total, "Total Time (Seconds)": time_total}, index=[0])
 
 result = pd.concat([by_run, totals], axis=1)
 
-print("Result:\n", result)
-
 result.to_csv("file2.csv", index=False)
 
-print("Grams in last run:")
-# print("Grams total of", metal_organic, ":", grams_total)
-
-print("total time run for", metal_organic, ":", time_total)
-
-# list_string = "\n".join(str(x) for x in index_tracker)
-
-# html = (dataframe.style).to_html()
-# f = open("demofile.html", "w")
-# f.write(html)
-# f.close()
-
-# f = open("demofile2.txt", "w")
-# f.write(list_string)
-# f.close()
-
+print("Result:\n", result)
+print("Total grams of", tmal.name, ":", grams_total)
+print("Total run time for", tmal.name, ":", time_total)
 print("Finished")
