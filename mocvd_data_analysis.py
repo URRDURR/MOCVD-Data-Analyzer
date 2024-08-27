@@ -3,32 +3,38 @@ from tkinter import filedialog as fd
 import numpy as np
 import pandas as pd
 from scipy import integrate
-import json
-from pint import UnitRegistry
 import re
 
 STANDARD_PRESSURE_TORR = 760
 STANDARD_TEMPERATURE_KELVIN = 273.15
 
-# returns the total number of liters that flow out of the bubbler
-def total_slpm_flow(df):
 
-    partial_pressure_torr = 10 ** (A - (B / (t + STANDARD_TEMPERATURE_KELVIN)))
+# returns the total number of liters that flow out of the bubbler
+def slpm_to_liters(df, organometal):
+    # partial_pressure_torr = 10 ** (
+    #     organometal.a - (organometal.b / (organometal.t + STANDARD_TEMPERATURE_KELVIN))
+    # )
 
     index_tracker = []
 
     for i in range(len(df["Date"])):
-        if df.loc[i, blocking_valve] == 0 and df.loc[i, bubbler_out_valve] == 1 and df.loc[i, bubbler_in_valve] == 1:
+        if (
+            df.loc[i, organometal.blocking_valve] == 0
+            and df.loc[i, organometal.bubbler_out_valve] == 1
+            and df.loc[i, organometal.bubbler_in_valve] == 1
+        ):
             index_tracker.append(i)
     # NOTE: Assumsumption here is that if the valve opens multiple times, the slight increase in total volume calculated due to placing the 1st closing
     # by the second oppening of the valve, and then integrating over that area, is so negligible that it is unnecessary to change the calculation to remove this
 
     # array of the pressure level (Torr)
-    pressure_array = np.squeeze(np.asarray(df.loc[index_tracker, [pressure_flow_controler]]))
+    pressure_array = np.squeeze(
+        np.asarray(df.loc[index_tracker, [organometal.pressure_flow_controler]])
+    )
 
     # array of the rate of flow (standard cubic centimeters per minute)
     flow_rate_array = np.squeeze(
-        np.asarray(df.loc[index_tracker, [mass_flow_controler]])
+        np.asarray(df.loc[index_tracker, [organometal.mass_flow_controler]])
     )  # NOTE: this may be wrong in how this is converted/intergrated, please check with David
 
     # array of the rate of flow (standard liters per second)
@@ -38,8 +44,11 @@ def total_slpm_flow(df):
     # Turned into regular liters per second
     for i in range(len(flow_rate_array)):
         flow_rate_array[i] = flow_rate_array[i] * (
-            ((t + STANDARD_TEMPERATURE_KELVIN) / (STANDARD_TEMPERATURE_KELVIN))
-            * (STANDARD_PRESSURE_TORR / (pressure_array[i] - partial_pressure_torr))
+            (
+                (organometal.t + STANDARD_TEMPERATURE_KELVIN)
+                / (STANDARD_TEMPERATURE_KELVIN)
+            )
+            * (STANDARD_PRESSURE_TORR / (pressure_array[i] - organometal.partial_pressure_torr()))
         )
 
     # Numericaly integrates into total real liters
@@ -49,14 +58,18 @@ def total_slpm_flow(df):
 
 
 # Assuming carrier gas is saturated immediately, calculates grams of metal oxide contained
-def liters_to_grams(liters):
+def liters_to_grams(liters, organometal):
     # gas constant in units "Torr" and "Liters"
     R_TORR_LITERS = 62.3638
 
     # calculates partial (Antoine Equation) pressure and applies (pv)/(rt) = n to get mols (factor of 2 added to account for tmal being dimer)
-    partial_pressure_torr = 10 ** (A - (B / (t + STANDARD_TEMPERATURE_KELVIN)))
-    mols = (partial_pressure_torr * liters) / (R_TORR_LITERS * (t + STANDARD_TEMPERATURE_KELVIN))
-    grams = molar_mass * mols
+    # partial_pressure_torr = 10 ** (
+    #     organometal.a - (organometal.b / (organometal.t + STANDARD_TEMPERATURE_KELVIN))
+    # )
+    mols = (organometal.partial_pressure_torr() * liters) / (
+        R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN)
+    )
+    grams = organometal.molar_mass * mols
 
     return grams
 
@@ -87,22 +100,48 @@ metal_organic = "TMAl"
 # metal_organic_properties = json.load(compounds)[metal_organic]
 # compounds.close()
 
-bubbler_in_valve = "DO40"
-bubbler_out_valve = "DO38"
-blocking_valve = "DO39"
-mass_flow_controler = "AI32"
-pressure_flow_controler = "AI33"
-molar_mass = 72.09 * 2
-A = 8.224
-B = 2134.83
-t = -10
+
+class TMAl_Source:
+    def __init__(self):
+        self.name = "TMAl"
+        self.bubbler_in_valve = "DO40"
+        self.bubbler_out_valve = "DO38"
+        self.blocking_valve = "DO39"
+        self.mass_flow_controler = "AI32"
+        self.pressure_flow_controler = "AI33"
+        self.molar_mass = 72.09 * 2
+        self.a = 8.224
+        self.b = 2134.83
+        self.t = -10
+
+    def partial_pressure_torr(self):
+        return 10 ** (self.a - (self.b / (self.t + STANDARD_TEMPERATURE_KELVIN)))
+
+    def calculate_mass_and_time(self, file_path):
+        df = pd.read_csv(file_path, delimiter=",", parse_dates=True, header=4)
+        total_liters, index_tracker = slpm_to_liters(df, self)
+        grams = float(liters_to_grams(total_liters, self))
+
+        time = len(index_tracker)
+        return time, grams
+
+
+tmal = TMAl_Source()
+
+# bubbler_in_valve = "DO40"
+# bubbler_out_valve = "DO38"
+# blocking_valve = "DO39"
+# mass_flow_controler = "AI32"
+# pressure_flow_controler = "AI33"
+# molar_mass = 72.09 * 2
+# a = 8.224
+# b = 2134.83
+# t = -10
 
 test_amount = 0.009555694
 
-liters_to_grams(test_amount)
-
 # Selects all the files to be read
-if PATH_VIA_TERMINAL == True:
+if PATH_VIA_TERMINAL:
     while True:
         location = input("would you like to select a file [1] or a directory [2]: ")
         if location == "1":
@@ -119,40 +158,47 @@ else:
     file_path = r"C:/Users/gma78/Desktop/Excels/2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
     files = [file_path]
 
-grams_total = 0
-time_total = 0
-
 grams_by_run = []
 time_by_run = []
-date = []
-name = []
+dates_list = []
+names_list = []
 
 # Calculates the total time on and liters outputed of the given metal oxide/bubbler
-for i in files:
-    print(i)
-    dataframe = pd.read_csv(i, delimiter=",", parse_dates=True, header=4)
-    total_flow_liters, index_tracker = total_slpm_flow(dataframe)
+for file in files:
+    print(file)
+    # dataframe = pd.read_csv(i, delimiter=",", parse_dates=True, header=4)
+    # total_flow_liters, index_tracker = slpm_to_liters(dataframe)
 
-    total_grams = liters_to_grams(total_flow_liters)
+    # total_grams = liters_to_grams(total_flow_liters)
 
-    grams_total += total_grams
-    time_total += len(index_tracker)
+    grams, time = tmal.calculate_mass_and_time(file)
 
-    grams_by_run.append(float(total_grams))
-    time_by_run.append(len(index_tracker))
+    grams_by_run.append(grams)
+    time_by_run.append(time)
 
-    designator = re.split("/|\\\\", i)
-    print(designator)
+    file_name = re.split("/|\\\\", file)
+    designation = ((file_name)[-1].split(" "))[0]
+
+    date = designation.split("_")[0]
+    name = " ".join(designation.split("_")[1:])
+
     # file_name = ((designator)[-1].split(" "))[0]
     # file_date = ((designator)[-1].split(" "))[0]
     # TODO 1 split name into date and name
-    name.append(designator)
+    names_list.append(name)
+    dates_list.append(date)
 
-print(grams_by_run)
-print(time_by_run)
+grams_total = sum(grams_by_run)
+time_total = sum(time_by_run)
 
-
-by_run = pd.DataFrame({"Name": name, "Grams by run": grams_by_run, "Time by run": time_by_run})
+by_run = pd.DataFrame(
+    {
+        "Date": dates_list,
+        "Name": names_list,
+        "Grams by run": grams_by_run,
+        "Time by run": time_by_run,
+    }
+)
 
 totals = pd.DataFrame({"Grams total": grams_total, "Time total": time_total}, index=[0])
 

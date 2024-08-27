@@ -10,6 +10,9 @@ import re
 STANDARD_PRESSURE_TORR = 760
 STANDARD_TEMPERATURE_KELVIN = 273.15
 
+while True:
+    continue
+
 # returns the total number of liters that flow out of the bubbler
 def total_slpm_flow(df):
 
@@ -77,7 +80,6 @@ def extract_file_locations(folder_path):
         file_paths[i] = folder_path + "\\" + file_paths[i]
 
     return file_paths
-
 
 PATH_VIA_TERMINAL = True
 
