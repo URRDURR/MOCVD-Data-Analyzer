@@ -57,8 +57,6 @@ def liters_to_grams(liters, organometal):
     mols = (organometal.partial_pressure_torr() * liters) / (R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN))
     grams = organometal.molar_mass * mols
 
-    print(mols / 9.25)
-
     return grams
 
 
@@ -94,12 +92,13 @@ class Organometal_Source:
         self.a = a
         self.b = b
         self.t = t
+        self.grams_per_run = []
+        self.time_per_run = []
 
     def partial_pressure_torr(self):
         return 10 ** (self.a - (self.b / (self.t + STANDARD_TEMPERATURE_KELVIN)))
 
-    def calculate_mass_and_time(self, file_path):
-        df = pd.read_csv(file_path, delimiter=",", parse_dates=True, header=4)
+    def calculate_mass_and_time(self, df):
         total_liters, index_tracker = slpm_to_liters(df, self)
 
         grams = float(liters_to_grams(total_liters, self))
@@ -127,14 +126,14 @@ tmga = Organometal_Source(
     bubbler_out_valve="DO26",
     blocking_valve="DO27",
     mass_flow_controler="AI38",
-    pressure_flow_controler="todo",
+    pressure_flow_controler="AI39",
     molar_mass=114.827,
     a=8.501,
     b=1824,
     t=-10,
 )
 
-PATH_VIA_TERMINAL = False
+PATH_VIA_TERMINAL = True
 
 test_amount = 0.009555694
 
@@ -156,46 +155,51 @@ else:
     file_path = r"C:/Users/gma78/Desktop/Excels/2024-06-28_S258_Datalog 6-28-2024 3-47-03 PM.csv"
     files = [file_path]
 
-grams_by_run = []
-time_by_run = []
+# TODO: #2 Add interface for selecting organometals and creating file title
+organometals_list = [tmal, tmga]
+
 dates_list = []
 names_list = []
 
 # Calculates the total time on and liters outputed of the given metal oxide/bubbler
 for file in files:
+    df = pd.read_csv(file, delimiter=",", parse_dates=True, header=4)
     print(file)
 
-    grams, time = tmal.calculate_mass_and_time(file)
+    for organometal in organometals_list:
+        grams, time = organometal.calculate_mass_and_time(df)
+        (organometal.grams_per_run).append(grams)
+        (organometal.time_per_run).append(time)
 
     file_name = re.split("/|\\\\", file)
     designation = ((file_name)[-1].split(" "))[0]
     date = designation.split("_")[0]
     name = " ".join(designation.split("_")[1:])
 
-    grams_by_run.append(grams)
-    time_by_run.append(time)
     names_list.append(name)
     dates_list.append(date)
 
-grams_total = sum(grams_by_run)
-time_total = sum(time_by_run)
+pd_argument = {
+    "Date (yy/mm/dd)": pd.Series(dates_list),
+    "Name": pd.Series(names_list),
+    "": pd.Series(None),
+}
 
-by_run = pd.DataFrame(
-    {
-        "Date (yy/mm/dd)": dates_list,
-        "Name": names_list,
-        "Mass (Grams)": grams_by_run,
-        "Time (Seconds)": time_by_run,
-    }
-)
+for organometal in organometals_list:
+    pd_argument.update(
+        {
+            f"[{organometal.name}] Mass (Grams)": pd.Series(organometal.grams_per_run),
+            f"[{organometal.name}] Time (Seconds)": pd.Series(organometal.time_per_run),
+            f"[{organometal.name}] Total Mass (Grams)": pd.Series([sum(organometal.grams_per_run)]),
+            f"[{organometal.name}] Total Time (Seconds)": pd.Series([sum(organometal.time_per_run)]),
+            " ": None,
+        }
+    )
+    print(organometal)
 
-totals = pd.DataFrame({"Total Mass (Grams)": grams_total, "Total Time (Seconds)": time_total}, index=[0])
-
-result = pd.concat([by_run, totals], axis=1)
+result = pd.DataFrame(pd_argument)
 
 result.to_csv("file2.csv", index=False)
 
 print("Result:\n", result)
-print("Total grams of", tmal.name, ":", grams_total)
-print("Total run time for", tmal.name, ":", time_total)
 print("Finished")
