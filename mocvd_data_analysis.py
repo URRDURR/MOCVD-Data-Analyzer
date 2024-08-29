@@ -1,8 +1,7 @@
-"""Generates an excel sheet depicting MOCVD source 
-   usage and time opperating when given log files"""
+"""Generates an excel sheet depicting MOCVD source
+    usage and time opperating when given log files"""
 
 import os
-import re
 from tkinter import filedialog as fd
 import numpy as np
 import pandas as pd
@@ -41,12 +40,12 @@ def slpm_to_liters(df, organometal):
 
     # array of the rate of flow (standard liters per second)
     for i, flow_rate_index in enumerate(flow_rate_array):
-        flow_rate_index /= 60 * 1000
+        flow_rate_array[i] = flow_rate_index / (60 * 1000)
 
     # TODO: #7 Just use enumerate from now on it seems way beter
     # Turned into regular liters per second
     for i, flow_rate_index in enumerate(flow_rate_array):
-        flow_rate_index = flow_rate_index * (
+        flow_rate_array[i] = flow_rate_index * (
             ((organometal.t + STANDARD_TEMPERATURE_KELVIN) / (STANDARD_TEMPERATURE_KELVIN))
             * (STANDARD_PRESSURE_TORR / (pressure_array[i] - organometal.partial_pressure_torr()))
         )
@@ -60,9 +59,8 @@ def slpm_to_liters(df, organometal):
 def liters_to_grams(liters, organometal):
     """Assuming carrier gas is saturated immediately, calculates grams of metal oxide contained"""
     # Applies (pv)/(rt) = n to get mols
-    mols = (organometal.partial_pressure_torr() * liters) / (
-        R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN)
-    )
+    mols = (organometal.partial_pressure_torr() * liters) / (R_TORR_LITERS * (organometal.t + STANDARD_TEMPERATURE_KELVIN))
+
     grams = organometal.molar_mass * mols
 
     return grams
@@ -81,8 +79,8 @@ def extract_file_locations(folder_path):
             file_paths.append(i)
 
     # give absolute path of each file in the directory
-    for i,file_path in enumerate(file_paths):
-        file_path = folder_path + "\\" + file_path
+    for i, single_file_path in enumerate(file_paths):
+        file_paths[i] = folder_path + "/" + single_file_path
 
     return file_paths
 
@@ -194,7 +192,7 @@ for file in files:
         (organometal.grams_per_run).append(grams)
         (organometal.time_per_run).append(time)
 
-    file_name = re.split("/|\\\\", file)
+    file_name = file.split("/")
     designation = ((file_name)[-1].split(" "))[0]
     date = designation.split("_")[0]
     name = " ".join(designation.split("_")[1:])
@@ -222,7 +220,7 @@ for organometal in organometals_list:
 
 result = pd.DataFrame(pd_argument)
 
-result.to_csv("file2.csv", index=False)
+result.to_csv("file3.csv", index=False)
 
 print("Result:\n", result)
 print("Finished")
