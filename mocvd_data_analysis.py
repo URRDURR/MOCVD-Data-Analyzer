@@ -1,5 +1,5 @@
 """Generates an excel sheet depicting MOCVD source
-    usage and time opperating when given log files"""
+usage and time opperating when given log files"""
 
 import os
 from tkinter import filedialog as fd
@@ -29,9 +29,7 @@ def slpm_to_liters(df, organometal):
     #  negligible that it is unnecessary to change the calculation to remove this
 
     # array of the pressure level (Torr)
-    pressure_array = np.squeeze(
-        np.asarray(df.loc[index_tracker, [organometal.pressure_flow_controler]])
-    )
+    pressure_array = np.squeeze(np.asarray(df.loc[index_tracker, [organometal.pressure_flow_controler]]))
 
     # array of the rate of flow (standard cubic centimeters per minute)
     flow_rate_array = np.squeeze(
